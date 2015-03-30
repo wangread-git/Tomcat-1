@@ -17,45 +17,7 @@
 package org.apache.catalina.startup;
 
 
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
-import java.util.jar.JarEntry;
-import java.util.jar.JarFile;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import javax.management.ObjectName;
-
-import org.apache.catalina.Container;
-import org.apache.catalina.Context;
-import org.apache.catalina.DistributedManager;
-import org.apache.catalina.Engine;
-import org.apache.catalina.Globals;
-import org.apache.catalina.Host;
-import org.apache.catalina.Lifecycle;
-import org.apache.catalina.LifecycleEvent;
-import org.apache.catalina.LifecycleListener;
-import org.apache.catalina.Manager;
+import org.apache.catalina.*;
 import org.apache.catalina.core.StandardHost;
 import org.apache.catalina.util.ContextName;
 import org.apache.catalina.util.IOTools;
@@ -65,6 +27,18 @@ import org.apache.tomcat.util.ExceptionUtils;
 import org.apache.tomcat.util.digester.Digester;
 import org.apache.tomcat.util.modeler.Registry;
 import org.apache.tomcat.util.res.StringManager;
+
+import javax.management.ObjectName;
+import java.io.*;
+import java.net.URL;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 /**
@@ -607,6 +581,7 @@ public class HostConfig
             fis = new FileInputStream(contextXml);
             synchronized (digester) {
                 try {
+                    //解析xml（/conf/Catalina/localhost/ROOT.xml）生成context
                     context = (Context) digester.parse(fis);
                 } catch (Exception e) {
                     log.error(sm.getString(
@@ -629,6 +604,7 @@ public class HostConfig
             context.setWebappVersion(cn.getVersion());
             // Add the associated docBase to the redeployed list if it's a WAR
             if (context.getDocBase() != null) {
+                //获取context定义的docBase（/conf/Catalina/localhost/ROOT.xml）
                 File docBase = new File(context.getDocBase());
                 if (!docBase.isAbsolute()) {
                     docBase = new File(appBase(), context.getDocBase());
@@ -652,7 +628,7 @@ public class HostConfig
                     context.setDocBase(null);
                 }
             }
-
+            //将context添加到host中
             host.addChild(context);
         } catch (Throwable t) {
             ExceptionUtils.handleThrowable(t);
@@ -1110,6 +1086,7 @@ public class HostConfig
             context.setPath(cn.getPath());
             context.setWebappVersion(cn.getVersion());
             context.setDocBase(cn.getBaseName());
+            //解析context.xml文件
             host.addChild(context);
         } catch (Throwable t) {
             ExceptionUtils.handleThrowable(t);

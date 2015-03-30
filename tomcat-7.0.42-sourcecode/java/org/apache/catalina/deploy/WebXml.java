@@ -18,18 +18,11 @@
 
 package org.apache.catalina.deploy;
 
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
+import org.apache.catalina.Context;
+import org.apache.catalina.Wrapper;
+import org.apache.catalina.core.ApplicationJspPropertyGroupDescriptor;
+import org.apache.catalina.core.ApplicationTaglibDescriptor;
+import org.apache.tomcat.util.res.StringManager;
 
 import javax.servlet.MultipartConfigElement;
 import javax.servlet.ServletContext;
@@ -37,12 +30,9 @@ import javax.servlet.SessionCookieConfig;
 import javax.servlet.SessionTrackingMode;
 import javax.servlet.descriptor.JspPropertyGroupDescriptor;
 import javax.servlet.descriptor.TaglibDescriptor;
-
-import org.apache.catalina.Context;
-import org.apache.catalina.Wrapper;
-import org.apache.catalina.core.ApplicationJspPropertyGroupDescriptor;
-import org.apache.catalina.core.ApplicationTaglibDescriptor;
-import org.apache.tomcat.util.res.StringManager;
+import java.net.URL;
+import java.util.*;
+import java.util.Map.Entry;
 
 /**
  * Representation of common elements of web.xml and web-fragment.xml. Provides
@@ -1238,6 +1228,7 @@ public class WebXml {
         // As far as possible, process in alphabetical order so it is easy to
         // check everything is present
         // Some validation depends on correct public ID
+        //web.xml文件开头定义的DOCTYPE web-app PUBLIC
         context.setPublicId(publicId);
 
         // Everything else in order
@@ -1443,7 +1434,7 @@ public class WebXml {
 
     /**
      * Merge the supplied web fragments into this main web.xml.
-     *
+     * 合并的过程就是将fragment的各个标签（属性）添加到webXml对应的属性里
      * @param fragments     The fragments to merge in
      * @return <code>true</code> if merge is successful, else
      *         <code>false</code>
@@ -1462,6 +1453,7 @@ public class WebXml {
                 return false;
             }
         }
+        //contextParams对应于web.xml中的context-param标签，这里将fragment里配置的context-param添加到webXml的contextParams中
         contextParams.putAll(temp.getContextParams());
 
         if (displayName == null) {
@@ -1521,6 +1513,7 @@ public class WebXml {
                 return false;
             }
         }
+        //添加错误页
         errorPages.putAll(temp.getErrorPages());
 
         // As per 'clarification' from the Servlet EG, filter definitions in the
@@ -1563,6 +1556,7 @@ public class WebXml {
                 }
             }
         }
+        //添加filter
         filters.putAll(temp.getFilters());
 
         for (WebXml fragment : fragments) {

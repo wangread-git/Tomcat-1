@@ -2534,6 +2534,7 @@ public class StandardContext extends ContainerBase
             filesystemBased = true;
             ((FileDirContext) resources).setAllowLinking(isAllowLinking());
         }
+        //设置webAPP资源
         this.webappResources = resources;
 
         // The proxied resources will be refreshed on start
@@ -4765,6 +4766,7 @@ public class StandardContext extends ContainerBase
         boolean ok = true;
         synchronized (filterConfigs) {
             filterConfigs.clear();
+            //FilterDef是根据web.xml生成的filter的定义类
             Iterator<String> names = filterDefs.keySet().iterator();
             while (names.hasNext()) {
                 String name = names.next();
@@ -4772,6 +4774,7 @@ public class StandardContext extends ContainerBase
                     getLogger().debug(" Starting filter '" + name + "'");
                 ApplicationFilterConfig filterConfig = null;
                 try {
+                    //重要，创建filterConfig并初始化
                     filterConfig =
                         new ApplicationFilterConfig(this, filterDefs.get(name));
                     filterConfigs.put(name, filterConfig);
@@ -5033,6 +5036,8 @@ public class StandardContext extends ContainerBase
      * Allocate resources, including proxy.
      * Return <code>true</code> if initialization was successfull,
      * or <code>false</code> otherwise.
+     *
+     * 创建resource代理，并将resources设置为这个代理
      */
     public boolean resourcesStart() {
 
@@ -5153,13 +5158,16 @@ public class StandardContext extends ContainerBase
     public void loadOnStartup(Container children[]) {
 
         // Collect "load on startup" servlets that need to be initialized
+        //这里用TreeMap来对servlet的加载顺序进行排序
         TreeMap<Integer, ArrayList<Wrapper>> map =
             new TreeMap<Integer, ArrayList<Wrapper>>();
         for (int i = 0; i < children.length; i++) {
             Wrapper wrapper = (Wrapper) children[i];
             int loadOnStartup = wrapper.getLoadOnStartup();
+            //loadOnStartup默认为-1
             if (loadOnStartup < 0)
                 continue;
+            //需要转换成Integer，因为Integer提供了compareTo方法
             Integer key = Integer.valueOf(loadOnStartup);
             ArrayList<Wrapper> list = map.get(key);
             if (list == null) {
@@ -5225,6 +5233,7 @@ public class StandardContext extends ContainerBase
                         (!(new File(getBasePath())).isDirectory()))
                     setResources(new WARDirContext());
                 else
+                //设置webappResources（真实的webAPP资源目录）
                     setResources(new FileDirContext());
             } catch (IllegalArgumentException e) {
                 log.error("Error initializing resources: " + e.getMessage());
@@ -5232,12 +5241,13 @@ public class StandardContext extends ContainerBase
             }
         }
         if (ok) {
+            //设置webappResources的docBase
             if (!resourcesStart()) {
                 log.error( "Error in resourceStart()");
                 ok = false;
             }
         }
-
+        //创建webAPP加载器，用来加载jar包、class下的资源等
         if (getLoader() == null) {
             WebappLoader webappLoader = new WebappLoader(getParentClassLoader());
             webappLoader.setDelegate(getDelegate());
@@ -5248,6 +5258,7 @@ public class StandardContext extends ContainerBase
         getCharsetMapper();
 
         // Post work directory
+        // 设置临时工作目录
         postWorkDirectory();
 
         // Validate required extensions
@@ -5319,6 +5330,7 @@ public class StandardContext extends ContainerBase
                     ((Lifecycle) resources).start();
 
                 // Notify our interested LifecycleListeners
+                // 启动事件（ContextConfig是关键，用于加载docBase下的配置文件）
                 fireLifecycleEvent(Lifecycle.CONFIGURE_START_EVENT, null);
                 
                 // Start our child containers, if not already started
@@ -5430,6 +5442,7 @@ public class StandardContext extends ContainerBase
             }
 
             // Configure and call application event listeners
+            //启动web.xml里面配置的listener，如spring的ContextLoaderListener
             if (ok) {
                 if (!listenerStart()) {
                     log.error( "Error listenerStart");
@@ -5456,6 +5469,8 @@ public class StandardContext extends ContainerBase
             }
             
             // Load and initialize all "load on startup" servlets
+            //重要，会涉及到servlet的实例化，servlet配置的load-on-startup决定tomcat启动时
+            //是否需要加载servlet（loadOnStartup > 0时加载）以及加载的顺序（根据loadOnStartup的大小）
             if (ok) {
                 loadOnStartup(findChildren());
             }

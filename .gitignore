@@ -12,9 +12,6 @@
 # OSX
 .DS_Store
 
-# Scripts
-*.sh
-
 # jenv
 .java-version
 

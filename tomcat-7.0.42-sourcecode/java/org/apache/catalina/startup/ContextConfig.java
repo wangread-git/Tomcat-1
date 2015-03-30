@@ -16,67 +16,13 @@
  */
 package org.apache.catalina.startup;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
-import java.net.JarURLConnection;
-import java.net.MalformedURLException;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.net.URLConnection;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-import java.util.StringTokenizer;
-import java.util.concurrent.ConcurrentHashMap;
-
-import javax.naming.Binding;
-import javax.naming.NameNotFoundException;
-import javax.naming.NamingEnumeration;
-import javax.naming.NamingException;
-import javax.servlet.ServletContainerInitializer;
-import javax.servlet.ServletContext;
-import javax.servlet.annotation.HandlesTypes;
-
 import org.apache.catalina.Authenticator;
-import org.apache.catalina.Container;
-import org.apache.catalina.Context;
-import org.apache.catalina.Engine;
-import org.apache.catalina.Globals;
-import org.apache.catalina.Host;
-import org.apache.catalina.Lifecycle;
-import org.apache.catalina.LifecycleEvent;
-import org.apache.catalina.LifecycleListener;
-import org.apache.catalina.Pipeline;
-import org.apache.catalina.Server;
-import org.apache.catalina.Service;
-import org.apache.catalina.Valve;
-import org.apache.catalina.Wrapper;
+import org.apache.catalina.*;
 import org.apache.catalina.core.ContainerBase;
 import org.apache.catalina.core.StandardContext;
 import org.apache.catalina.core.StandardEngine;
 import org.apache.catalina.core.StandardHost;
-import org.apache.catalina.deploy.ErrorPage;
-import org.apache.catalina.deploy.FilterDef;
-import org.apache.catalina.deploy.FilterMap;
-import org.apache.catalina.deploy.LoginConfig;
-import org.apache.catalina.deploy.SecurityConstraint;
-import org.apache.catalina.deploy.ServletDef;
-import org.apache.catalina.deploy.WebXml;
+import org.apache.catalina.deploy.*;
 import org.apache.catalina.util.ContextName;
 import org.apache.catalina.util.Introspection;
 import org.apache.juli.logging.Log;
@@ -87,14 +33,7 @@ import org.apache.naming.resources.ResourceAttributes;
 import org.apache.tomcat.JarScanner;
 import org.apache.tomcat.JarScannerCallback;
 import org.apache.tomcat.util.ExceptionUtils;
-import org.apache.tomcat.util.bcel.classfile.AnnotationElementValue;
-import org.apache.tomcat.util.bcel.classfile.AnnotationEntry;
-import org.apache.tomcat.util.bcel.classfile.ArrayElementValue;
-import org.apache.tomcat.util.bcel.classfile.ClassFormatException;
-import org.apache.tomcat.util.bcel.classfile.ClassParser;
-import org.apache.tomcat.util.bcel.classfile.ElementValue;
-import org.apache.tomcat.util.bcel.classfile.ElementValuePair;
-import org.apache.tomcat.util.bcel.classfile.JavaClass;
+import org.apache.tomcat.util.bcel.classfile.*;
 import org.apache.tomcat.util.digester.Digester;
 import org.apache.tomcat.util.digester.RuleSet;
 import org.apache.tomcat.util.res.StringManager;
@@ -102,6 +41,19 @@ import org.apache.tomcat.util.scan.Jar;
 import org.apache.tomcat.util.scan.JarFactory;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXParseException;
+
+import javax.naming.Binding;
+import javax.naming.NameNotFoundException;
+import javax.naming.NamingEnumeration;
+import javax.naming.NamingException;
+import javax.servlet.ServletContainerInitializer;
+import javax.servlet.ServletContext;
+import javax.servlet.annotation.HandlesTypes;
+import java.io.*;
+import java.net.*;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.lang.Deprecated;
 
 /**
  * Startup event listener for a <b>Context</b> that configures the properties
@@ -163,6 +115,7 @@ public class ContextConfig implements LifecycleListener {
         authenticators = props;
 
         // Load the list of JARS to skip
+        //默认的需要跳过的jar包，在/conf/catalina.properties中配置
         addJarsToSkip(Constants.DEFAULT_JARS_TO_SKIP);
         addJarsToSkip(Constants.PLUGGABILITY_JARS_TO_SKIP);
     }
@@ -373,6 +326,7 @@ public class ContextConfig implements LifecycleListener {
 
         // Process the event that has occurred
         if (event.getType().equals(Lifecycle.CONFIGURE_START_EVENT)) {
+            //开始根据docBase设置的配置目录进行配置
             configureStart();
         } else if (event.getType().equals(Lifecycle.BEFORE_START_EVENT)) {
             beforeStart();
@@ -541,6 +495,7 @@ public class ContextConfig implements LifecycleListener {
         fakeAttributes.put(Object.class, attrs);
         digester.setFakeAttributes(fakeAttributes);
         RuleSet contextRuleSet = new ContextRuleSet("", false);
+        //关键地方，为digester设置规则（digester使用了策略模式）
         digester.addRuleSet(contextRuleSet);
         RuleSet namingRuleSet = new NamingRuleSet("Context/");
         digester.addRuleSet(namingRuleSet);
@@ -822,6 +777,8 @@ public class ContextConfig implements LifecycleListener {
 
     /**
      * Process a "init" event for this Context.
+     *
+     * 主要是初始化digester
      */
     protected void init() {
         // Called from StandardContext.init()
@@ -874,7 +831,7 @@ public class ContextConfig implements LifecycleListener {
                     Boolean.valueOf(context.getXmlValidation()),
                     Boolean.valueOf(context.getXmlNamespaceAware())));
         }
-
+        //关键，开始解析web.xml的配置
         webConfig();
 
         if (!context.getIgnoreAnnotations()) {
@@ -1243,12 +1200,15 @@ public class ContextConfig implements LifecycleListener {
          *   scanned to check if they match.
          */
         Set<WebXml> defaults = new HashSet<WebXml>();
+        //解析默认web.xml文件
         defaults.add(getDefaultWebXmlFragment());
 
         WebXml webXml = createWebXml();
 
         // Parse context level web.xml
+        //获取真实的web.xml配置
         InputSource contextWebXml = getContextWebXmlSource();
+        //解析web.xml文件，并将解析出的数据（filter、servlet等）存放在webXml中
         parseWebXml(contextWebXml, webXml, false);
 
         ServletContext sContext = context.getServletContext();
@@ -1258,7 +1218,7 @@ public class ContextConfig implements LifecycleListener {
         // Step 1. Identify all the JARs packaged with the application
         // If the JARs have a web-fragment.xml it will be parsed at this
         // point.
-        Map<String,WebXml> fragments = processJarsForWebFragments();
+        Map<String,WebXml> fragments = processJarsForWebFragments();        //解析jar包里的META-INF/web-fragment.xml文件
 
         // Step 2. Order the fragments.
         Set<WebXml> orderedFragments = null;
@@ -1328,12 +1288,13 @@ public class ContextConfig implements LifecycleListener {
             // Step 6. Merge web-fragment.xml files into the main web.xml
             // file.
             if (ok) {
-                ok = webXml.merge(orderedFragments);
+                ok = webXml.merge(orderedFragments);     //将fragment合并到webXml
             }
 
             // Step 7. Apply global defaults
             // Have to merge defaults before JSP conversion since defaults
             // provide JSP servlet definition.
+            //将默认web.xml合并到webXml
             webXml.merge(defaults);
 
             // Step 8. Convert explicitly mentioned jsps to servlets
@@ -1343,6 +1304,7 @@ public class ContextConfig implements LifecycleListener {
 
             // Step 9. Apply merged web.xml to Context
             if (ok) {
+                //将webXml的属性逐个设置到context中
                 webXml.configureContext(context);
             }
         } else {
@@ -1400,15 +1362,16 @@ public class ContextConfig implements LifecycleListener {
             }
         }
     }
-
+    //解析默认的web.xml配置
     private WebXml getDefaultWebXmlFragment() {
 
         // Host should never be null
         Host host = (Host) context.getParent();
 
         DefaultWebXmlCacheEntry entry = hostWebXmlCache.get(host);
-
+        //获取全局web.xml配置（默认是/conf/web.xml）
         InputSource globalWebXml = getGlobalWebXmlSource();
+        //获取host的web.xml配置（/conf/Catalina/web.xml.default）
         InputSource hostWebXml = getHostWebXmlSource();
 
         long globalTimeStamp = 0;
@@ -1462,6 +1425,7 @@ public class ContextConfig implements LifecycleListener {
             webXmlDefaultFragment.setAlwaysAddWelcomeFiles(false);
 
             // Parse global web.xml if present
+            // 解析全局web.xml文件
             if (globalWebXml == null) {
                 // This is unusual enough to log
                 log.info(sm.getString("contextConfig.defaultMissing"));
@@ -1779,6 +1743,7 @@ public class ContextConfig implements LifecycleListener {
                 }
             }
             else {
+                //通过之前设置的resources获取docBase指向的web.xml文件作为输入流
                 stream = servletContext.getResourceAsStream
                     (Constants.ApplicationWebXml);
                 try {
@@ -1871,6 +1836,7 @@ public class ContextConfig implements LifecycleListener {
             ruleSet = webRuleSet;
         }
 
+        //将WebXml作为root，push到digester中
         digester.push(dest);
         digester.setErrorHandler(handler);
 
@@ -2650,7 +2616,7 @@ public class ContextConfig implements LifecycleListener {
         private static final String FRAGMENT_LOCATION =
             "META-INF/web-fragment.xml";
         private Map<String,WebXml> fragments = new HashMap<String,WebXml>();
-
+        //解析jar包中的META-INF/web-fragment.xml文件
         @Override
         public void scan(JarURLConnection jarConn) throws IOException {
 

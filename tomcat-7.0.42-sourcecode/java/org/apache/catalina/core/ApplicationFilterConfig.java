@@ -19,21 +19,6 @@
 package org.apache.catalina.core;
 
 
-import java.io.Serializable;
-import java.lang.reflect.InvocationTargetException;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import javax.management.ObjectName;
-import javax.naming.NamingException;
-import javax.servlet.Filter;
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-
 import org.apache.catalina.Context;
 import org.apache.catalina.Globals;
 import org.apache.catalina.deploy.FilterDef;
@@ -45,6 +30,16 @@ import org.apache.tomcat.util.log.SystemLogHandler;
 import org.apache.tomcat.util.modeler.Registry;
 import org.apache.tomcat.util.modeler.Util;
 import org.apache.tomcat.util.res.StringManager;
+
+import javax.management.ObjectName;
+import javax.naming.NamingException;
+import javax.servlet.Filter;
+import javax.servlet.FilterConfig;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
+import java.io.Serializable;
+import java.lang.reflect.InvocationTargetException;
+import java.util.*;
 
 
 /**
@@ -104,6 +99,7 @@ public final class ApplicationFilterConfig implements FilterConfig, Serializable
         this.filterDef = filterDef;
         // Allocate a new filter instance if necessary
         if (filterDef.getFilter() == null) {
+            //创建并初始化
             getFilter();
         } else {
             this.filter = filterDef.getFilter();
@@ -257,8 +253,9 @@ public final class ApplicationFilterConfig implements FilterConfig, Serializable
 
         // Identify the class loader we will be using
         String filterClass = filterDef.getFilterClass();
+        //生成filter实例
         this.filter = (Filter) getInstanceManager().newInstance(filterClass);
-        
+        //初始化filter
         initFilter();
         
         return (this.filter);
