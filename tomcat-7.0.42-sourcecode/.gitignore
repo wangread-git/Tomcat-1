@@ -40,3 +40,17 @@ java/org/apache/catalina/startup/catalina.properties
 modules/jdbc-pool/bin
 modules/jdbc-pool/includes
 webapps/docs/jdbc-pool.xml
+
+*.class
+
+*.log
+
+# Package Files #
+*.jar
+*.war
+*.ear
+
+#IntelliJ IDEA
+.idea/
+*.iml
+target/
